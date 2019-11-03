@@ -1,0 +1,21 @@
+% Rotors (in the form of variable[number])
+
+% Transmission Pulley
+D[1]
+d[1]
+m[1]
+
+% Driving Roller
+D[1]
+d[1]
+m[1]
+
+% Driven Roller
+D[1]
+d[1]
+m[1]
+
+% Transmission Pulley
+D[1]
+d[1]
+m[1]
