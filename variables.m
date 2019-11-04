@@ -4,6 +4,9 @@
 % D, d  /  m
 % m     /  kg
 
+% Driving roller radius
+r = 0.075;
+
 % Transmission Pulley
 D(1) = 0;
 d(1) = 0;
@@ -50,10 +53,10 @@ iC(1) = 0;
 
 % Belt
 f(1) = 250;
-r = 0.075;
 
 %% Constant rotary
 % tC     /  Nm
+
 
 %% MOTOR
 % Max speed
