@@ -1,5 +1,9 @@
-function [] = calculate()
+function [] = calculate(motorSpeed, motorTorque, motorName, inertiaOfMotor, motorPeakTorque)
 %% Calculations script for motors coursework
+%
+% All inputs are optional; if not specified there will be prompts while
+% script is running
+%
 %% Callum Morrison, 2019
 
 %% --- VARIABLES ---
@@ -64,14 +68,20 @@ f(1) = 250;
 % tC     /  Nm
 
 
-%% MOTOR
-% Max speed of driven rotor
+%% VELOCITY PROFILE
+% Max speed of driving rotor
 % v = r * omega
 linmax = 1; %v                           % ms^-1
+
+% --- DO NOT EDIT ---
 vmaxrad = linmax / r; % omega            % rads^-1
 vmax = vmaxrad * 60 / (2 * pi());        % rpm
-
 clear linmax
+% -------------------
+
+% Time variables in the form
+% [startAccel, stopAccel, startDecel, stopDecel]
+t = [0, 2, 5, 7];
 
 %% GEARBOX
 % Initial gear ratio
@@ -87,19 +97,29 @@ clear sz
 
 fprintf(br)
 
+%% Initialise nested variables
+inertiaAtMotor = 0;
+constTorque = 0;
+power = 0;
+
 %% Inertia Calculations
 inertiaCalc
 
 %% Basic Power Calculation
-power = 0; % Initialise to prevent errors
 powerCalc
 
 %% Motor Selection
 % Initial motor speed
 happy = 0;
 while happy ~= 1
-    motorSpeed = input("Please enter an initial motor speed to test (rpm): ");
-    motorTorque = input("Please enter the stall torque for this motor (Nm): ");
+    
+    if ~exist("motorSpeed", "var")
+        motorSpeed = input("Please enter an initial motor speed to test (rpm): ");
+    end
+    
+    if ~exist("motorTorque", "var")
+        motorTorque = input("Please enter the stall torque for this motor (Nm): ");
+    end
     
     motorPower = motorSpeed * 2 * pi() / 30 * motorTorque;
     
@@ -130,12 +150,23 @@ fprintf("Motor selected successfully: %dW, %drpm, %.2fNm stall torque\n", round(
 
 fprintf(br)
 
-inertiaOfMotor = input("Please enter the inertia for this motor in kgm^s: ");
-fprintf("Motor inertia set as %d \n", inertiaOfMotor)
+if ~exist("inertiaOfMotor", "var")
+    inertiaOfMotor = input("Please enter the inertia for this motor in kgcm^s: ");
+end
+
+inertiaOfMotor = inertiaOfMotor / 10000;
+fprintf("Motor inertia set as %d kgm^2 \n", inertiaOfMotor)
 
 iC = [iC, inertiaOfMotor];
 
-motorName = input("Please enter an identifying name for the selected motor: ", 's');
+if ~exist("motorPeakTorque", "var")
+    motorPeakTorque = input("Please enter the peak torque for this motor in Nm: ");
+end
+fprintf("Motor peak torque set as %d \n", motorPeakTorque)
+
+if ~exist("motorName", "var")
+    motorName = input("Please enter an identifying name for the selected motor: ", 's');
+end
 fprintf("Motor name set as %s \n", motorName)
 
 fprintf(br)
@@ -144,28 +175,72 @@ fprintf(br)
 gr = motorSpeed / vmax;
 
 fprintf("New required gear ratio calculated as %.2f\n", gr)
+
+% Assume 100% efficiency until otherwise specified
+mechEfficiency = 1;
+
+if lower(input("Would you like to find a suitable gearbox at this time? Y/N: ", "s")) == "y"
+    
+    inertiaOfGearbox = input("Please enter the inertia for this gearbox in kgcm^s: ");
+    inertiaOfGearbox = inertiaOfGearbox / 10000;
+    fprintf("Gearbox inertia set as %d kgm^2 \n", inertiaOfGearbox)
+    
+    iC = [iC, inertiaOfGearbox];
+    
+    mechEfficiency = mechEfficiency*input("Please enter the efficiency for this gearbox (0% 0-1 100%): ");
+    fprintf("Mechanical efficiency now set as %d\n", mechEfficiency)    
+    
+else
+    fprintf("Not adding gearbox values at this time... \n")
+end
+
 fprintf("Re-calculating inertia using new gear ratio... \n")
 
+% Inertia will change with a different gear ratio
 inertiaCalc
 
-fprintf("Re-calculating power required using new gear ratio... \n")
+% Conversely, power will not change. Although gr is now different, speed is
+% different proportionally, resulting in the same amount of work done (this
+% makes sense; the output is the same as before)
 
-powerCalc
+%% Calculate non-steady state torque!
+% Constant torque is assumed to be 100% at any speed - as this is worst
+% case scenario
 
-if motorPower > power
-    fprintf("Motor (%dW) is more powerful than required power %.2fW \n", round(motorPower), power)
-    fprintf(br)
-elseif motorPower <= power
-    fprintf("\nERROR: Motor (%dW) is not powerful enough (required %.2fW) \n", round(motorPower), power)
-    fprintf("ERROR: Re-run calculate.m file and change the motor\n")
-    
-    fprintf(br)
+fprintf("Assume constant torque %.2fNm is 100%% at any speed!\n\n", constTorque)
+fprintf("Using inertia at motor as %dkgm^2\n", inertiaAtMotor)
+
+% Case 1: Acceleration
+dt = t(2) - t(1);
+
+fprintf("Acceleration: change in angular velocity of %drads^-1 in %ds \n", vmaxrad, dt)
+accelTorque = (constTorque + inertiaAtMotor * (vmaxrad / dt)) / mechEfficiency;
+fprintf("Required acceleration torque calculated as %.2fNm \n", accelTorque)
+
+% Case 2: Deceleration
+dt = t(4) - t(3);
+
+fprintf("Deceleration: change in angular velocity of -%drads^-1 in %ds \n", vmaxrad, dt)
+decelTorque = (constTorque + inertiaAtMotor * (-vmaxrad / dt)) / mechEfficiency;
+fprintf("Required deceleration torque calculated as %.2fNm \n", decelTorque)
+
+%% Calculate RMS and Peak Torque
+
+if motorPeakTorque > max([accelTorque, decelTorque])
+    fprintf("Motor peak torque (%.2f) is greater than required peak (%.2f)\n", motorPeakTorque, max([accelTorque, decelTorque]))
+else
+    fprintf("Motor peak torque (%.2f) is LOWER than required peak (%.2f)\n", motorPeakTorque, max([accelTorque, decelTorque]))
+    error("Restart with a new motor...")
 end
+
+% Calculate RMS torque, where Tcycle = t(4)
+torqueRMS = sqrt(1 / t(4) * (t(2) * accelTorque^2 + (t(3) - t(2)) * constTorque^2 + (t(4) - t(3)) * decelTorque ) );
+fprintf("RMS Torque calculated as %.2f", torqueRMS)
 
 %% NESTED FUNCTIONS
 
+%% Inertia Calculations
     function inertiaCalc
-        %% Inertia Calculations
         inertia = 0;
         
         % For rotors
@@ -231,17 +306,18 @@ end
         
     end
 
+%% Power Calculations
     function powerCalc
         % Check for constant linear friction, convert to torque
         
-        torque = 0;
+        constTorque = 0;
         if exist('f','var')
             for x = 1:1:size(f,2)
                 fprintf("Constant linear force found: f = " + f(x) + "N\n")
                 
-                torque(x) = linearToRotary(f(x),r(x));
+                constTorque(x) = linearToRotary(f(x),r(x));
                 
-                fprintf("Constant torque for constant force " + x + " was calculated as " + torque(x) + "Nm\n")
+                fprintf("Constant torque for constant force " + x + " was calculated as " + constTorque(x) + "Nm\n")
             end
         else
             fprintf("No constant linear force detected... continuing\n")
@@ -254,28 +330,28 @@ end
             for x = 1:1:size(tC,2)
                 fprintf("Constant torque found: t = " + tC(x) + "Nm\n")
                 
-                torque = [torque,tC(x)];
+                constTorque = [constTorque, tC(x)];
             end
         else
             fprintf("No constant linear force detected... continuing\n")
         end
         
         % Throw error if no friction (power would be zero)
-        if ~exist("torque","var")
+        if ~exist("constTorque","var")
             error("No constant torque calculated... something went wrong\n")
         end
         
         fprintf(br)
         
         % Calculate total torque acting on motor
-        torque = sum(torque) / gr;
-        fprintf("Total torque acting on motor calculated as %dNm \n", torque)
+        constTorque = sum(constTorque) / gr;
+        fprintf("Total torque acting on motor calculated as %dNm \n", constTorque)
         
         % Calculate total power required to overcome torque
         motorvmax = vmaxrad * gr;
         fprintf("Maximum motor velocity %d rad^s-1 \n", motorvmax)
         
-        power = motorvmax * torque;
+        power = motorvmax * constTorque;
         fprintf("Initial motor power calculation = %.2fW \n", power)
         
         fprintf(br)
