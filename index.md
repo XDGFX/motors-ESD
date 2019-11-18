@@ -1,7 +1,7 @@
-# Motors Coursework Function Webpage
-#### Callum Morrison, 2019
+### Motors Coursework Function Webpage
+**Callum Morrison, 2019**
 
-___
+---
 
 Here is where you can access the live function designed to aid in motor and transmission selection.
 
