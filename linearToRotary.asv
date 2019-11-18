@@ -1,3 +1,0 @@
-function [] = linearToRotary(linear,)
-%% Calculations script for motors coursework
-%% Callum Morrison, 2019
