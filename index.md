@@ -11,9 +11,7 @@ The variables are currently set up in the final state (once all transmission com
 
 **You have two options:**
 
-[Download the script to run on your own computer](https://github.com/XDGFX/motors-ESD/raw/master/calculate.mlx)
-
-[You will also need the motors table](https://github.com/XDGFX/motors-ESD/raw/master/motorsTable.mat)
+[Download the script to run on your own computer](https://github.com/XDGFX/motors-ESD/raw/master/calculate.mlx) (You will also need the [motors table)](https://github.com/XDGFX/motors-ESD/raw/master/motorsTable.mat)
 
 [View the script in your web browser](calculate.html)
 
